@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subtítulos en castellano</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Generador de subtítulos en castellano</h1>
+    <p>Sube un audio o vídeo, y la aplicación genera transcripción + archivo SRT/VTT.</p>
+
+    <form id="upload-form">
+      <label>
+        Archivo de audio o vídeo
+        <input type="file" id="audio" name="audio" required />
+      </label>
+
+      <label>
+        Modelo Whisper
+        <select id="model_size" name="model_size">
+          <option value="tiny">tiny (rápido)</option>
+          <option value="base">base</option>
+          <option value="small" selected>small</option>
+          <option value="medium">medium (más preciso)</option>
+        </select>
+      </label>
+
+      <button type="submit">Generar subtítulos</button>
+    </form>
+
+    <section id="status" class="status"></section>
+
+    <section id="result" class="hidden">
+      <h2>Transcripción</h2>
+      <pre id="texto"></pre>
+
+      <div class="downloads">
+        <button id="download-srt">Descargar .srt</button>
+        <button id="download-vtt">Descargar .vtt</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const statusBox = document.getElementById('status');
+    const resultBox = document.getElementById('result');
+    const texto = document.getElementById('texto');
+    const btnSrt = document.getElementById('download-srt');
+    const btnVtt = document.getElementById('download-vtt');
+
+    let latestSrt = '';
+    let latestVtt = '';
+
+    function downloadText(filename, content) {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      statusBox.textContent = 'Procesando audio... puede tardar según la duración del archivo y el modelo.';
+      resultBox.classList.add('hidden');
+
+      const formData = new FormData(form);
+      try {
+        const response = await fetch('/api/subtitulos', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Error desconocido');
+        }
+
+        latestSrt = data.srt;
+        latestVtt = data.vtt;
+        texto.textContent = data.texto || '(Sin texto)';
+
+        statusBox.textContent = 'Subtítulos generados correctamente.';
+        resultBox.classList.remove('hidden');
+      } catch (error) {
+        statusBox.textContent = `No se pudo generar: ${error.message}`;
+      }
+    });
+
+    btnSrt.addEventListener('click', () => {
+      if (!latestSrt) return;
+      downloadText('subtitulos.srt', latestSrt);
+    });
+
+    btnVtt.addEventListener('click', () => {
+      if (!latestVtt) return;
+      downloadText('subtitulos.vtt', latestVtt);
+    });
+  </script>
+</body>
+</html>
