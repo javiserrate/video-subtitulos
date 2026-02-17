@@ -27,6 +27,11 @@
         </select>
       </label>
 
+      <label class="checkbox">
+        <input type="checkbox" id="translate" name="translate" value="true" />
+        Traducir al inglés (además de transcribir)
+      </label>
+
       <button type="submit">Generar subtítulos</button>
     </form>
 
@@ -39,6 +44,7 @@
       <div class="downloads">
         <button id="download-srt">Descargar .srt</button>
         <button id="download-vtt">Descargar .vtt</button>
+        <button id="download-video" class="hidden" type="button">Descargar vídeo con subtítulos incrustados</button>
       </div>
     </section>
   </main>
@@ -50,9 +56,20 @@
     const texto = document.getElementById('texto');
     const btnSrt = document.getElementById('download-srt');
     const btnVtt = document.getElementById('download-vtt');
+    const btnVideo = document.getElementById('download-video');
 
     let latestSrt = '';
     let latestVtt = '';
+    let latestVideoBase64 = '';
+
+    function b64ToBlob(base64, mimeType) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new Blob([bytes], { type: mimeType });
+    }
 
     function downloadText(filename, content) {
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -84,9 +101,18 @@
 
         latestSrt = data.srt;
         latestVtt = data.vtt;
+        latestVideoBase64 = data.video_subtitulado_base64 || '';
         texto.textContent = data.texto || '(Sin texto)';
 
-        statusBox.textContent = 'Subtítulos generados correctamente.';
+        if (latestVideoBase64) {
+          btnVideo.classList.remove('hidden');
+        } else {
+          btnVideo.classList.add('hidden');
+        }
+
+        statusBox.textContent = data.modo === 'traduccion'
+          ? 'Traducción + subtítulos generados correctamente.'
+          : 'Transcripción + subtítulos generados correctamente.';
         resultBox.classList.remove('hidden');
       } catch (error) {
         statusBox.textContent = `No se pudo generar: ${error.message}`;
@@ -101,6 +127,17 @@
     btnVtt.addEventListener('click', () => {
       if (!latestVtt) return;
       downloadText('subtitulos.vtt', latestVtt);
+    });
+
+    btnVideo.addEventListener('click', () => {
+      if (!latestVideoBase64) return;
+      const blob = b64ToBlob(latestVideoBase64, 'video/mp4');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'video-subtitulado.mp4';
+      a.click();
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
