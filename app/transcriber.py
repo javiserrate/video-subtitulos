@@ -21,12 +21,17 @@ def _load_model(model_size: str):
     return whisper.load_model(model_size)
 
 
-def transcribe_spanish(file_path: Path, model_size: str = "small") -> TranscriptionResult:
+def transcribe_audio(
+    file_path: Path,
+    model_size: str = "small",
+    translate_to_english: bool = False,
+) -> TranscriptionResult:
     model = _load_model(model_size)
+    task = "translate" if translate_to_english else "transcribe"
     result = model.transcribe(
         str(file_path),
         language="es",
-        task="transcribe",
+        task=task,
         temperature=0,
         fp16=False,
         verbose=False,
