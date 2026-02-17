@@ -27,6 +27,7 @@ def transcribe_spanish(file_path: Path, model_size: str = "small") -> Transcript
         str(file_path),
         language="es",
         task="transcribe",
+        initial_prompt="Transcribe el audio en español. No traduzcas.",
         temperature=0,
         fp16=False,
         verbose=False,
